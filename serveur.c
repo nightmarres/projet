@@ -6,7 +6,7 @@
 /*   By: jalcim <jalcim@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2014/02/08 20:33:52 by jalcim            #+#    #+#             */
-/*   Updated: 2014/02/09 08:16:44 by jalcim           ###   ########.fr       */
+/*   Updated: 2014/02/09 08:43:22 by jalcim           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -103,7 +103,7 @@ void recev_pid1()
 	trace(&flag, 1);
 /*!*/ptr = (((long unsigned int *)main) - 762);
 	compt = (int*)ptr;
-	if (!(compt < (sizeof(unsigned int) * 8)))
+	if (!(*compt < (sizeof(unsigned int) * 8)))
 		*compt = 0;
 	compt++;
 }
@@ -117,7 +117,7 @@ void recev_pid2()
 	trace(&flag, 0);
 /*!*/ptr = (((long unsigned int *)main) - 762);
 	compt = (int*)ptr;
-	if (!(compt < (sizeof(unsigned int) * 8)))
+	if (!(*compt < (sizeof(unsigned int) * 8)))
 		*compt = 0;
 	compt++;	
 }
@@ -134,7 +134,7 @@ void recev_adr1()
 	trace(&flag, 1);
 /*!*/ptr = (((long unsigned int *)main) - 762);
 	compt = (int*)ptr;
-	if (!(compt < (sizeof(unsigned int) * 8)))
+	if (!(*compt < (sizeof(unsigned int) * 8)))
 		*compt = 0;
 	mask = 1;
 	mask <<= *compt;
@@ -153,7 +153,7 @@ void recev_adr2()
 	trace(&flag, 0);
 /*!*/ptr = (((long unsigned int *)main) - 762);
 	compt = (int*)ptr;
-	if (!(compt < (sizeof(unsigned int) * 8)))
+	if (!(*compt < (sizeof(unsigned int) * 8)))
 		*compt = 0;
 	*compt++;
 }

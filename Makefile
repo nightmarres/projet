@@ -10,22 +10,42 @@
 #                                                                              #
 #******************************************************************************#
 
-all: save
-	gcc -o client client.c
-	gcc -o serveur serveur.c
+NAME1  = client
+NAME2  = serveur
 
-re:	save fclean all
+SRC1    = client.c \
+		  ft_atoi.c \
+		  ft_strcpy.c \
+		  ft_strlen.c
 
-fclean: clean
-	rm -r client
-	rm -r serveur
+SRC2    = serveur.c \
+
+OBJ1		= $(SRC1:.c=.o)
+OBJ2		= $(SRC2:.c=.o)
+INCL	= .
+CMP		= cc
+FLAGS	= -Wall -Werror -Wextra
+
+.PHONY: re all clean fclean 
+
+all: $(NAME) $(NAME2)
+
+$(NAME1): $(OBJ1)
+	@$(CMP) -o $(NAME) $(FLAGS) $(OBJ1)
+
+$(NAME2): $(OBJ)
+	@$(CMP) -o $(NAME) $(FLAGS) $(OBJ)
+
+%.o: %.c
+	@$(CMP) -I $(INCL) -o $@ -c $? $(FLAGS)
+
+.PHONY: clean fclean re
 
 clean:
+	@rm -f $(OBJ)
 
-save:
-	cp client.c old/
-	cp serveur.c old/
-	cp Makefile old/
+fclean: clean
+	@rm -f $(NAME1)
+	@rm -f $(NAME2)
 
-exec:
-	./client
+re: fclean all

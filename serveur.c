@@ -1,175 +1,181 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   serveur.c                                          :+:      :+:    :+:   */
+/*   serveurv2.c                                        :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: jalcim <jalcim@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2014/02/08 20:33:52 by jalcim            #+#    #+#             */
-/*   Updated: 2014/02/09 08:43:22 by jalcim           ###   ########.fr       */
+/*   Created: 2014/02/09 15:27:36 by jalcim            #+#    #+#             */
+/*   Updated: 2014/02/09 19:51:53 by jalcim           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include <signal.h>
-#include <stdio.h>
 #include <string.h>
+#include <stdio.h>
+
 #include <stdlib.h>
+#include <signal.h>
+#include <unistd.h>
 
-//unsigned long int ptr = 0;//unsigned int ptr = 0;
+typedef struct sigaction t_sig;
+//typedef struct siginfo_t t_info;
+typedef struct s_data t_data;
 
-void recev_pid1();
-void recev_pid2();
-void recev_adr1();
-void recev_adr2();
-void error();
-void standby();
-void trace(int *flag, int bit);
-void reponse(int bit);
-//void term();
+struct s_data
+{
+	char *str;//a malloc et realloc
+	int index;
+	int compt;
+	unsigned char letter;
+	unsigned char mask;
+
+	siginfo_t *info;
+};
+
+void error(char *error);
+void two(t_data *data);
+void one(t_data *data);
+t_data *recup(t_data *data);
+void fct(int value, siginfo_t *info, void *i_dont_understand);
+int init(t_sig *rcv_sig1, t_sig *rcv_sig2);
+int alloc(t_data **data, t_sig **rcv_sig1, t_sig **rcv_sig2);
+void standby(t_data *data);
 
 int main()
 {
+	static t_data *data;
+	t_sig *rcv_sig1;
+	t_sig *rcv_sig2;
 	int compt;
 
- 	compt = 0;
- 	printf("connect\n");
+	printf("%d\n", getpid());
+	compt = 0;
+	while (alloc(&data, &rcv_sig1, &rcv_sig2))
+	{
+		printf("error at malloc wait pliz\n");
+		if (!(compt < 3))
+			main();
+		compt++;
+	}
+	compt = 0;
+	while (init(rcv_sig1, rcv_sig2))
+	{
+		printf("error ar init wait pliz\n");
+		if (!(compt < 3))
+			main();
+		compt++;
+	}
+	printf("connect");
+	standby(data);
 
-
- 	signal(SIGUSR1, recev_adr1);
- 	signal(SIGUSR2, recev_adr2);
-//	signal(SIGINT, term);
-//	printf("%lu\n", (sizeof(unsigned long int *) * 8));
-
-	standby();
+	return (0);
 }
 
-void standby()
+void standby(t_data *data)
 {
-	sleep(10);
-	error();
+	printf("%s\n", data->str);
+	sleep(5);
+	if (data->info)
+	{
+		printf("error aucun signal detecter\n");
+//		kill(data->info->si_pid, SIGUSR2);
+	}
+	while (42);
 }
 
-void trace(int *flag, int bit)
+int alloc(t_data **data, t_sig **rcv_sig1, t_sig **rcv_sig2)
 {
-	if (*flag == 2)
+	if (!((*data) = (t_data *)malloc(sizeof(t_data))))
+		return (1);
+	bzero((*data), sizeof(t_data));
+	recup((*data));
+	if (!((*data)->str = (char *)malloc(100)))
+		return (1);
+	if (0 > ((*rcv_sig1) = (t_sig *)malloc(sizeof(t_sig))))
+		return (1);
+	bzero((*rcv_sig1), sizeof(t_sig));
+	if (0 > ((*rcv_sig2) = (t_sig *)malloc(sizeof(t_sig))))
+		return (1);
+	bzero((*rcv_sig2), sizeof(t_sig));
+	(*data)->index = 0;
+	return (0);
+}
+
+int init(t_sig *rcv_sig1, t_sig *rcv_sig2)
+{
+	rcv_sig1->sa_sigaction = fct;
+	rcv_sig1->sa_flags = SA_SIGINFO;
+	rcv_sig1->sa_mask = SA_NODEFER;
+	if (sigaction(SIGUSR1, rcv_sig1, NULL))
 	{
-		*flag = 1;
-		standby();
+		printf("error sigaction\n");
+		return (1);
 	}
-	if (*flag == 1)
+	rcv_sig2->sa_sigaction = fct;
+	rcv_sig2->sa_flags = SA_SIGINFO;
+	rcv_sig2->sa_mask = SA_NODEFER;
+	if (sigaction(SIGUSR2, rcv_sig2, NULL))
 	{
-		*flag = 0;
-		reponse(bit);
+		printf("error sigaction\n");
+		return (1);
 	}
-	if (!(*flag))
-		*flag = 2;
+	return (0);
+}
+
+void fct(int value, siginfo_t *info, __attribute__ ((unused)) void *i_dont_understand)
+{
+	static t_data *data = NULL;
+
+	if (!data)
+		data = recup(NULL);
+	data->info = info;
+	if (value == SIGUSR1)
+		one(data);
+	if (value == SIGUSR2)
+		two(data);
+}
+
+t_data *recup(t_data *data)
+{
+	static t_data *rdata;
+	if (!data)
+		return (rdata);
 	else
-		error();
+		rdata = data;
+	return (NULL);
 }
 
-void reponse(int bit)
+void one(t_data *data)
 {
-	unsigned long int ptr;
-	int *pid;
+	unsigned char mask;
 
-	ptr = (unsigned long int)recev_adr1;
-	pid = (int *)ptr; 
-	kill(*pid, (bit ? SIGUSR1 : SIGUSR2));
-	sleep(1);
-	error();
-}
-
-void error()
-{
-	long unsigned int ptr;
-	long unsigned int *mask;
-	int pid;//a implenter
-
-	kill(pid, SIGUSR2);
-
-/*!*/ptr = (((long unsigned int)recev_adr1) - 762);
-	ptr -= 1;//(sizeof(long unsigned int) / 8);
-	mask = (long unsigned int *)ptr;
-}
-
-void recev_pid1()
-{
-	static int flag = 1;
-	static unsigned int pid;
-	static unsigned int mask;
-	long unsigned int *ptr;
-	int *compt;
-
-	trace(&flag, 1);
-/*!*/ptr = (((long unsigned int *)main) - 762);
-	compt = (int*)ptr;
-	if (!(*compt < (sizeof(unsigned int) * 8)))
-		*compt = 0;
-	compt++;
-}
-
-void recev_pid2()
-{
-	static int flag = 1;
-	long unsigned int *ptr;
-	int *compt;
-
-	trace(&flag, 0);
-/*!*/ptr = (((long unsigned int *)main) - 762);
-	compt = (int*)ptr;
-	if (!(*compt < (sizeof(unsigned int) * 8)))
-		*compt = 0;
-	compt++;	
-}
-
-void recev_adr1()
-{
-	static long unsigned int addr = 0;
-	static long unsigned int mask;
-	static int flag = 1;
-	long unsigned int *ptr;
-	int *compt;
-
-//	printf("%lu\n%lu\n", (long unsigned int)fct1, (long unsigned int)&ptr);
-	trace(&flag, 1);
-/*!*/ptr = (((long unsigned int *)main) - 762);
-	compt = (int*)ptr;
-	if (!(*compt < (sizeof(unsigned int) * 8)))
-		*compt = 0;
+	if (data->compt >= (int)(sizeof(char) * 8))
+	{
+		data->compt = 0;
+		if (!(data->index < (int)sizeof(*data->str)))
+			if (!(realloc(data->str, (sizeof(*data->str) * 2))))
+				error("error at realloc");
+		data->str[data->index] = data->letter;//malloc et realloc str
+		printf("%c\n", data->letter);//tmp
+		data->letter = 0;
+	}
 	mask = 1;
-	mask <<= *compt;
-	addr = mask | addr;
-	printf("%lu\n", addr);
-	*compt++;
-	flag = 1;
+	mask <<= data->compt;
+	data->letter |= mask;
+	data->compt++;
+	kill(data->info->si_pid, SIGUSR1);
+	standby(data);
 }
 
-void recev_adr2()
+void two(t_data *data)
 {
-	static int flag = 1; // 1 = pas encore passer; 2 = derniere instruction; 0 = en cour de check
-	long unsigned int *ptr;
-	int *compt;
-
-	trace(&flag, 0);
-/*!*/ptr = (((long unsigned int *)main) - 762);
-	compt = (int*)ptr;
-	if (!(*compt < (sizeof(unsigned int) * 8)))
-		*compt = 0;
-	*compt++;
+	data->compt++;
+	kill(data->info->si_pid, SIGUSR1);
+	standby(data);
 }
 
-/*
-void term()
+void error(char *error)
 {
-	long unsigned int *ptr;
-	long unsigned int aff;
-
-	ptr = NULL;
-	ptr = (long unsigned int *)fct1;
-	ptr -= 672;
-
-//	aff = (long unsigned int)(*ptr);
-	printf("au final %lu\n", (long unsigned int)*ptr);
-	exit(1);
+	printf("%s\n", error);
+	exit (0);
 }
-*/
